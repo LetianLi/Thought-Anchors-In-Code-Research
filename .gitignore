@@ -1,3 +1,7 @@
+# Project specific
+data/
+assets/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -209,5 +213,3 @@ __marimo__/
 # Macbook stuff
 .DS_Store
 ._*
-
-assets
