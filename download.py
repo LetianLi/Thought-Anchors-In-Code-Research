@@ -1,30 +1,26 @@
 import os
-print("loaded os")
-from transformers import AutoModelForCausalLM, AutoTokenizer
-print("loaded transformers")
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from datasets import load_dataset
-print("loaded datasets")
 from pathlib import Path
-print("loaded path")
 
-MODEL_ID = "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+MODEL_ID = "unsloth/DeepSeek-R1-0528-Qwen3-8B-bnb-4bit" 
 ASSETS = Path("assets")
 MODEL_DIR = ASSETS / "model"
 DATA_DIR = ASSETS / "data"
 
-print(f"Downloading {MODEL_ID} to {MODEL_DIR}...")
+print(f"Downloading pre-quantized {MODEL_ID} to {MODEL_DIR}...")
 
-# download tokenizer
+# Download tokenizer
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, cache_dir=MODEL_DIR)
 tokenizer.save_pretrained(MODEL_DIR)
 
-# download model
+# Download the pre-quantized model
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
     cache_dir=MODEL_DIR,
-    device_map="cpu"
+    device_map="auto"
 )
-model.save_pretrained("model")
 
 print("Downloading datasets...")
 
@@ -34,6 +30,6 @@ mbpp.save_to_disk(DATA_DIR / "mbpp")
 
 # HumanEval
 human_eval = load_dataset("openai_humaneval", split="test", cache_dir=DATA_DIR)
-human_eval.save_to_disk(DATA_DIR / "human_eval")
+human_eval.save_to_disk(DATA_DIR / "openai_humaneval")
 
 print(f"Download complete")
