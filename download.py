@@ -1,4 +1,12 @@
 import os
+
+from dotenv import load_dotenv
+load_dotenv()
+if not os.getenv("HF_TOKEN"):
+    print("HF_TOKEN not found in .env")
+else:
+    print("HF_TOKEN found in .env")
+
 print("loaded os")
 from transformers import AutoModelForCausalLM, AutoTokenizer
 print("loaded transformers")
