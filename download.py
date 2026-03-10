@@ -1,8 +1,17 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from datasets import load_dataset
-from pathlib import Path
+
+
+load_dotenv()
+if not os.getenv("HF_TOKEN"):
+    print("HF_TOKEN not found in .env")
+else:
+    print("HF_TOKEN found in .env")
 
 MODEL_ID = "unsloth/DeepSeek-R1-0528-Qwen3-8B-bnb-4bit" 
 ASSETS = Path("assets")
