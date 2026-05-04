@@ -6,7 +6,7 @@ import argparse
 import os
 
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub import snapshot_download
 
 from thought_anchors_code.config import (
     DATA_DIR,
@@ -53,16 +53,12 @@ def download_assets(
 
     if not skip_model:
         print(f"Downloading {model_id} to {target_model_dir}...")
-        tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=HF_CACHE_DIR)
         target_model_dir.mkdir(parents=True, exist_ok=True)
-        tokenizer.save_pretrained(target_model_dir)
-
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id,
+        snapshot_download(
+            repo_id=model_id,
             cache_dir=HF_CACHE_DIR,
-            device_map="auto",
+            local_dir=target_model_dir,
         )
-        model.save_pretrained(target_model_dir)
 
     if not skip_datasets:
         print("Downloading datasets...")

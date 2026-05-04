@@ -1,6 +1,7 @@
 # Project specific
 data/
-assets/
+assets/*
+!assets/rollouts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

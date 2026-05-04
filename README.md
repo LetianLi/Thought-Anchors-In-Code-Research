@@ -39,7 +39,7 @@ Useful variants:
 ```bash
 uv run download-assets --skip-model
 uv run download-assets --skip-datasets
-uv run download-assets --model Qwen/Qwen3.5-4B
+uv run download-assets --model Qwen/Qwen3.5-0.8B
 ```
 
 ### Dataset stats
@@ -68,7 +68,7 @@ uv run collect-code-rollouts humaneval --limit 5 --output assets/rollouts/humane
 
 Useful note:
 
-- the current default model is `Qwen/Qwen3.5-4B`
+- the current default model is `Qwen/Qwen3.5-0.8B`
 - rollout generation is slow on this machine, so for sanity checks prefer small runs such as `--limit 1 --max-new-tokens 16`
 
 ### Receiver-head analysis
@@ -94,13 +94,13 @@ Important note:
 Generate Figure 4 style receiver-head demo plots from a rollout JSONL file:
 
 ```bash
-uv run plot-receiver-heads assets/rollouts/openai_humaneval_rollouts.jsonl --model Qwen/Qwen3.5-4B --output-dir results/figure4_demo
+uv run plot-receiver-heads assets/rollouts/openai_humaneval_rollouts.jsonl --model Qwen/Qwen3.5-0.8B --output-dir results/figure4_demo
 ```
 
 Generate a demo folder for every rollout in the file:
 
 ```bash
-uv run plot-receiver-heads assets/rollouts/openai_humaneval_rollouts.jsonl --model Qwen/Qwen3.5-4B --output-dir results/figure4_demo_all --all-rollouts
+uv run plot-receiver-heads assets/rollouts/openai_humaneval_rollouts.jsonl --model Qwen/Qwen3.5-0.8B --output-dir results/figure4_demo_all --all-rollouts
 ```
 
 This writes:

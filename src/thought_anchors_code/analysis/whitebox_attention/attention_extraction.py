@@ -44,7 +44,7 @@ def compute_attention_tensors(
 
     token_ids = inputs["input_ids"][0].detach().cpu().tolist()
     attn_layers = [
-        layer[0].detach().cpu().numpy().astype(np.float32)
+        layer[0].detach().to(torch.float32).cpu().numpy()
         for layer in outputs.attentions
     ]
     return attn_layers, token_ids
@@ -79,7 +79,7 @@ def build_sentence_attention_cache(
     boundaries = get_sentence_token_boundaries(text, sentences, tokenizer)
     matrices = []
     for layer_attention in outputs.attentions:
-        layer_heads = layer_attention[0].detach().cpu().numpy().astype(np.float32)
+        layer_heads = layer_attention[0].detach().to(torch.float32).cpu().numpy()
         matrices.append(
             [
                 average_attention_by_sentence(head_matrix, boundaries)
@@ -87,11 +87,37 @@ def build_sentence_attention_cache(
             ]
         )
 
-    stacked = np.asarray(matrices, dtype=np.float32)
+    stacked = _expand_sparse_attention_layers(
+        np.asarray(matrices, dtype=np.float32), model
+    )
     if cache_path is not None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         np.save(cache_path, stacked)
     return stacked
+
+
+def _expand_sparse_attention_layers(stacked: np.ndarray, model) -> np.ndarray:
+    config = getattr(model, "config", None)
+    layer_types = getattr(config, "layer_types", None)
+    text_config = getattr(config, "text_config", None)
+    if isinstance(text_config, dict):
+        layer_types = layer_types or text_config.get("layer_types")
+    elif layer_types is None:
+        layer_types = getattr(text_config, "layer_types", None)
+    if not layer_types:
+        return stacked
+
+    full_attention_layers = [
+        index for index, layer_type in enumerate(layer_types) if layer_type == "full_attention"
+    ]
+    if len(full_attention_layers) != stacked.shape[0]:
+        return stacked
+
+    expanded_shape = (len(layer_types),) + stacked.shape[1:]
+    expanded = np.full(expanded_shape, np.nan, dtype=np.float32)
+    for compressed_layer, actual_layer in enumerate(full_attention_layers):
+        expanded[actual_layer] = stacked[compressed_layer]
+    return expanded
 
 
 def _attention_cache_key(
@@ -104,6 +130,7 @@ def _attention_cache_key(
             "model": model_name_or_path,
             "text": text,
             "sentences": list(sentences),
+            "version": 4,
         },
         sort_keys=True,
     )

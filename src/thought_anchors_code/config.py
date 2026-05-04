@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-DEFAULT_MODEL_ID = "Qwen/Qwen3.5-4B"
+DEFAULT_MODEL_ID = "Qwen/Qwen3.5-0.8B"
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 SRC_ROOT = PACKAGE_ROOT.parent

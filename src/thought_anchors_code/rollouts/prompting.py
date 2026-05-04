@@ -4,8 +4,8 @@ from __future__ import annotations
 
 
 DEFAULT_REASONING_INSTRUCTIONS = (
-    "Solve the coding task step by step. Think through the approach first, then write the final "
-    "Python solution. Keep the reasoning explicit and put the final code after the reasoning."
+    "Solve the coding task. Keep the reasoning concise, then write the final Python solution. "
+    "Put the final code after the reasoning."
 )
 
 
