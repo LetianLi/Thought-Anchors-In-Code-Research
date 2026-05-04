@@ -1,0 +1,49 @@
+task_id: HumanEval/1
+sample_id: 0
+dataset_name: openai_humaneval
+model_id: Qwen/Qwen3.5-4B
+complete: False
+layer_index: 7
+highlighted_head: 1
+num_sentences: 27
+global_kurtosis_median_min: -1.0557
+global_kurtosis_median_max: 10.1898
+top_heads_in_layer:
+  head 1: kurtosis=10.0477
+  head 2: kurtosis=6.6914
+  head 0: kurtosis=5.5256
+  head 9: kurtosis=4.9791
+  head 12: kurtosis=1.6917
+  head 14: kurtosis=1.2474
+  head 10: kurtosis=1.0681
+  head 3: kurtosis=0.9663
+  head 11: kurtosis=0.5769
+  head 4: kurtosis=0.4041
+sentences:
+  0: <test>
+  1: Your own test cases to verify the logic of the docstring example and the provided tests.
+  2: </test>
+  3: Let me understand the problem:
+  4: 1. We have a string containing multiple groups of nested parentheses
+  5: 2. We need to separate those groups into separate strings
+  6: 3. Separate groups are balanced (each open brace is properly closed) and not nested within each other
+  7: 4. We need to ignore any spaces in the input string
+  8: The key insight is to track the balance of parentheses:
+  9: - When we encounter '(', we increment a counter
+  10: - When we encounter ')', we decrement the counter
+  11: - When the counter reaches 0, we've completed a group
+  12: Let me trace through the examples:
+  13: Example 1: '( ) (( )) (( )( ))'
+  14: - '(': counter=1
+  15: - ' ': ignore
+  16: - ')': counter=0, group complete: '()'
+  17: - '(': counter=1
+  18: - '(': counter=2
+  19: - '(': counter=3
+  20: - ')': counter=2
+  21: - ')': counter=1
+  22: - '(': counter=2
+  23: - ')': counter=1
+  24: - '(': counter=2
+  25: - ')': counter=1
+  26: - ')':

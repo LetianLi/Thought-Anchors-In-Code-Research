@@ -1,30 +1,15 @@
 """Local model loading utilities."""
 
-import warnings
-from pathlib import Path
 from typing import Tuple
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-
-DEFAULT_MODEL_ID = "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
-
-
-def resolve_local_model_path(model_name_or_path: str, data_dir: str | Path = "data") -> Path:
-    """Resolve a downloaded local model directory."""
-    direct_path = Path(model_name_or_path)
-    if direct_path.exists():
-        return direct_path
-
-    candidate = Path(data_dir) / "models" / model_name_or_path.split("/")[-1]
-    if candidate.exists():
-        return candidate
-
-    raise FileNotFoundError(
-        f"Could not find local model for '{model_name_or_path}'. "
-        f"Checked {direct_path} and {candidate}."
-    )
+from thought_anchors_code.config import (
+    DEFAULT_MODEL_ID,
+    HF_CACHE_DIR,
+    resolve_local_model_path,
+)
 
 
 class ModelLoader:
@@ -37,19 +22,17 @@ class ModelLoader:
     def get_model(
         self,
         model_name_or_path: str = DEFAULT_MODEL_ID,
-        data_dir: str | Path = "data",
         float32: bool = True,
         device_map: str = "auto",
         do_flash_attn: bool = False,
     ) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
-        cache_key = (model_name_or_path, str(data_dir), float32, device_map, do_flash_attn)
+        cache_key = (model_name_or_path, float32, device_map, do_flash_attn)
 
         if cache_key in self._model_cache:
             return self._model_cache[cache_key]
 
         model, tokenizer = self._load_model(
             model_name_or_path=model_name_or_path,
-            data_dir=data_dir,
             float32=float32,
             device_map=device_map,
             do_flash_attn=do_flash_attn,
@@ -60,19 +43,40 @@ class ModelLoader:
     def _load_model(
         self,
         model_name_or_path: str,
-        data_dir: str | Path,
         float32: bool,
         device_map: str,
         do_flash_attn: bool,
     ) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
-        model_path = resolve_local_model_path(model_name_or_path, data_dir)
+        try:
+            model_source = resolve_local_model_path(model_name_or_path)
+        except FileNotFoundError:
+            model_source = model_name_or_path
 
-        warnings.filterwarnings(
-            "ignore", message="Sliding Window Attention is enabled but not implemented"
-        )
-        warnings.filterwarnings("ignore", message="Setting `pad_token_id` to `eos_token_id`")
+        try:
+            return self._load_model_from_source(
+                model_source=model_source,
+                float32=float32,
+                device_map=device_map,
+                do_flash_attn=do_flash_attn,
+            )
+        except FileNotFoundError:
+            if isinstance(model_source, str):
+                raise
+            return self._load_model_from_source(
+                model_source=model_name_or_path,
+                float32=float32,
+                device_map=device_map,
+                do_flash_attn=do_flash_attn,
+            )
 
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+    def _load_model_from_source(
+        self,
+        model_source: str | object,
+        float32: bool,
+        device_map: str,
+        do_flash_attn: bool,
+    ) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
+        tokenizer = AutoTokenizer.from_pretrained(model_source, cache_dir=HF_CACHE_DIR)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
@@ -86,32 +90,33 @@ class ModelLoader:
         else:
             model_kwargs["attn_implementation"] = "eager"
 
-        model_path_str = str(model_path)
-        if not any(name in model_path_str for name in ["Llama", "DeepSeek-R1", "gpt-oss"]):
-            model_kwargs["sliding_window"] = None
+        model_path_str = str(model_source)
 
         if float32:
-            model_kwargs["torch_dtype"] = torch.float32
+            model_kwargs["dtype"] = torch.float32
         elif "gpt-oss" in model_path_str:
-            model_kwargs["torch_dtype"] = torch.bfloat16
+            model_kwargs["dtype"] = torch.bfloat16
         else:
-            model_kwargs["torch_dtype"] = torch.float16
+            model_kwargs["dtype"] = torch.float16
 
-        model = AutoModelForCausalLM.from_pretrained(model_path, **model_kwargs)
+        model_kwargs["cache_dir"] = HF_CACHE_DIR
+        model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs)
         return model, tokenizer
 
     def get_tokenizer(
         self,
         model_name_or_path: str = DEFAULT_MODEL_ID,
-        data_dir: str | Path = "data",
     ) -> AutoTokenizer:
-        cache_key = (model_name_or_path, str(data_dir))
+        cache_key = model_name_or_path
 
         if cache_key in self._tokenizer_cache:
             return self._tokenizer_cache[cache_key]
 
-        model_path = resolve_local_model_path(model_name_or_path, data_dir)
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        try:
+            model_source = resolve_local_model_path(model_name_or_path)
+        except FileNotFoundError:
+            model_source = model_name_or_path
+        tokenizer = AutoTokenizer.from_pretrained(model_source, cache_dir=HF_CACHE_DIR)
 
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
@@ -129,14 +134,12 @@ _default_loader = ModelLoader()
 
 def get_local_model(
     model_name_or_path: str = DEFAULT_MODEL_ID,
-    data_dir: str | Path = "data",
     float32: bool = True,
     device_map: str = "auto",
     do_flash_attn: bool = False,
 ) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
     return _default_loader.get_model(
         model_name_or_path=model_name_or_path,
-        data_dir=data_dir,
         float32=float32,
         device_map=device_map,
         do_flash_attn=do_flash_attn,
@@ -145,9 +148,27 @@ def get_local_model(
 
 def get_tokenizer(
     model_name_or_path: str = DEFAULT_MODEL_ID,
-    data_dir: str | Path = "data",
 ) -> AutoTokenizer:
     return _default_loader.get_tokenizer(
         model_name_or_path=model_name_or_path,
-        data_dir=data_dir,
     )
+
+
+def get_model_input_device(model: AutoModelForCausalLM) -> torch.device:
+    hf_device_map = getattr(model, "hf_device_map", None)
+    if isinstance(hf_device_map, dict):
+        for placement in hf_device_map.values():
+            if placement in {"disk", "cpu"}:
+                continue
+            return torch.device(placement)
+
+    try:
+        return next(model.parameters()).device
+    except StopIteration:
+        pass
+
+    model_device = getattr(model, "device", None)
+    if model_device is not None:
+        return torch.device(model_device)
+
+    raise ValueError("Could not determine model input device.")

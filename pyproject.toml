@@ -1,16 +1,41 @@
 [project]
 name = "thought-anchors-in-code-research"
 version = "0.1.0"
-description = "Add your description here"
+description = "Thought anchor analysis for code reasoning rollouts"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
-    "accelerate>=1.13.0",
+    "accelerate>=1.1.0",
+    "datasets>=3.0.0",
+    "matplotlib>=3.9.0",
+    "numpy>=2.0.0",
     "python-dotenv>=1.0.0",
-    "bitsandbytes>=0.49.2",
-    "datasets>=4.6.1",
-    "packaging>=26.0",
-    "torch>=2.10.0",
-    "transformers>=5.3.0",
-    "tqdm>=4.67.3",
+    "scipy>=1.14.0",
+    "torch>=2.11.0",
+    "transformers>=5.7.0",
+    "tqdm>=4.67.0",
+    "protobuf>=7.34.0",
+    "ipython>=9.13.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/thought_anchors_code"]
+
+[project.scripts]
+receiver-head-analysis = "thought_anchors_code.analysis.whitebox_attention.cli:main"
+collect-code-rollouts = "thought_anchors_code.rollouts.cli:main"
+download-assets = "thought_anchors_code.setup.download:main"
+plot-receiver-heads = "thought_anchors_code.analysis.whitebox_attention.plot_cli:main"

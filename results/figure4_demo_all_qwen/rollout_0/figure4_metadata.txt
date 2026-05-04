@@ -1,0 +1,36 @@
+task_id: HumanEval/0
+sample_id: 0
+dataset_name: openai_humaneval
+model_id: Qwen/Qwen3.5-4B
+complete: False
+layer_index: 7
+highlighted_head: 13
+num_sentences: 14
+global_kurtosis_median_min: -1.0557
+global_kurtosis_median_max: 10.1898
+top_heads_in_layer:
+  head 13: kurtosis=3.2139
+  head 9: kurtosis=1.5214
+  head 1: kurtosis=0.8379
+  head 0: kurtosis=0.8039
+  head 6: kurtosis=0.3174
+  head 2: kurtosis=-0.1958
+  head 5: kurtosis=-0.2656
+  head 12: kurtosis=-0.3617
+  head 4: kurtosis=-0.3843
+  head 7: kurtosis=-0.3945
+sentences:
+  0: The task is to check if any two numbers in a list are closer to each other than a given threshold.
+  1: Key points:
+  2: 1. We need to compare the absolute difference between all pairs of numbers
+  3: 2. If any pair has a difference less than the threshold, return True
+  4: 3. Otherwise, return False
+  5: Approach:
+  6: 1. Sort the list first - this makes it easier to compare adjacent elements
+  7: 2. After sorting, we only need to check adjacent elements (since if non-adjacent elements are closer than threshold, adjacent ones would also be closer)
+  8: 3. Iterate through the sorted list and check if the difference between consecutive elements is less than threshold
+  9: 4. Return True if any pair meets the condition, False otherwise
+  10: Let me verify with the examples:
+  11: - [1.0, 2.0, 3.0], 0.5: sorted is [1.0, 2.0, 3.0], differences are 1.0, 1.0.
+  12: Both >= 0.5, so False ✓
+  13: - [1.0, 2.8, 3.0, 4.0, 5.0, 2.0],
