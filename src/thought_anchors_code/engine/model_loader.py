@@ -101,6 +101,9 @@ class ModelLoader:
 
         model_kwargs["cache_dir"] = HF_CACHE_DIR
         model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs)
+        if float32:
+            model = model.float()
+            _set_config_dtype(model.config, "float32")
         _warn_if_model_is_offloaded(model)
         return model, tokenizer
 
@@ -215,3 +218,18 @@ def _warn_if_model_is_offloaded(model: AutoModelForCausalLM) -> None:
         print(
             "[model_loader] WARNING: model layers are offloaded to CPU/disk; generation will likely be CPU-bound and very slow."
         )
+
+
+def _set_config_dtype(config, dtype_name: str) -> None:
+    for attr in ("dtype", "torch_dtype", "mamba_ssm_dtype"):
+        if hasattr(config, attr):
+            setattr(config, attr, dtype_name)
+    text_config = getattr(config, "text_config", None)
+    if text_config is not None:
+        for attr in ("dtype", "torch_dtype", "mamba_ssm_dtype"):
+            if hasattr(text_config, attr):
+                setattr(text_config, attr, dtype_name)
+        if isinstance(text_config, dict):
+            text_config["dtype"] = dtype_name
+            text_config["torch_dtype"] = dtype_name
+            text_config["mamba_ssm_dtype"] = dtype_name

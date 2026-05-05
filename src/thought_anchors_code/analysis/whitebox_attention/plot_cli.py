@@ -10,6 +10,7 @@ from thought_anchors_code.analysis.whitebox_attention.plots import (
 )
 from thought_anchors_code.analysis.whitebox_attention.trace_utils import (
     load_rollouts_jsonl,
+    truncate_rollouts_to_sentence_percentile,
 )
 from thought_anchors_code.config import (
     CACHE_DIR,
@@ -59,6 +60,11 @@ def parse_args() -> argparse.Namespace:
         default=CACHE_DIR / "whitebox_attention",
         help="Cache directory for sentence-averaged attention tensors.",
     )
+    parser.add_argument(
+        "--no-truncate",
+        action="store_true",
+        help="Analyze full reasoning traces instead of truncating at the input file's 75th percentile sentence count.",
+    )
     return parser.parse_args()
 
 
@@ -66,6 +72,12 @@ def main() -> None:
     args = parse_args()
     ensure_analysis_dirs()
     rollouts = load_rollouts_jsonl(args.rollout_file)
+    if not args.no_truncate:
+        rollouts, max_sentences = truncate_rollouts_to_sentence_percentile(rollouts)
+        if max_sentences is not None:
+            print(
+                f"[attention] Truncated reasoning traces to p75 sentence count: {max_sentences}"
+            )
     if args.all_rollouts:
         for rollout_index in range(len(rollouts)):
             rollout_output_dir = args.output_dir / f"rollout_{rollout_index}"

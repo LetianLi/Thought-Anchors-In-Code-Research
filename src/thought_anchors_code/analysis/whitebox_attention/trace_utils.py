@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 import re
 import warnings
+from dataclasses import replace
+
+import numpy as np
 
 from thought_anchors_code.analysis.whitebox_attention.types import CodeRollout
 
@@ -127,3 +130,23 @@ def load_rollouts_jsonl(path: str | Path) -> list[CodeRollout]:
                 )
             )
     return rollouts
+
+
+def truncate_rollouts_to_sentence_percentile(
+    rollouts: list[CodeRollout],
+    percentile: float = 75.0,
+) -> tuple[list[CodeRollout], int | None]:
+    counts = [len(split_reasoning_steps(rollout.reasoning)) for rollout in rollouts]
+    counts = [count for count in counts if count > 0]
+    if not counts:
+        return rollouts, None
+
+    max_sentences = max(1, int(np.percentile(np.asarray(counts, dtype=float), percentile)))
+    truncated = []
+    for rollout in rollouts:
+        steps = split_reasoning_steps(rollout.reasoning)
+        if len(steps) > max_sentences:
+            truncated.append(replace(rollout, reasoning="".join(steps[:max_sentences])))
+        else:
+            truncated.append(rollout)
+    return truncated, max_sentences

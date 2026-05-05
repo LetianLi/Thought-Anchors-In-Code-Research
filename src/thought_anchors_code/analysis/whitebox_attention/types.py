@@ -42,6 +42,7 @@ class RolloutAttentionSummary:
     sample_id: int
     sentence_scores: list[float]
     receiver_head_scores: list[float]
+    code_sentence_scores: list[float] | None = None
 
 
 def default_trace_cache_dir(base_dir: Path, rollout_key: str) -> Path:

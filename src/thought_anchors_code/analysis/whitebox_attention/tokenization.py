@@ -76,3 +76,38 @@ def average_attention_by_sentence(
             if region.size:
                 averaged[row_index, col_index] = float(np.mean(region))
     return averaged
+
+
+def average_attention_heads_by_sentence(
+    matrices,
+    sentence_boundaries: Sequence[tuple[int, int]],
+):
+    import numpy as np
+
+    size = len(sentence_boundaries)
+    if size == 0:
+        return np.zeros((matrices.shape[0], 0, 0), dtype=np.float32)
+
+    boundaries = np.asarray(sentence_boundaries, dtype=np.int64)
+    row_starts = boundaries[:, 0]
+    row_ends = boundaries[:, 1]
+    col_starts = boundaries[:, 0]
+    col_ends = boundaries[:, 1]
+    row_lengths = np.maximum(row_ends - row_starts, 1)
+    col_lengths = np.maximum(col_ends - col_starts, 1)
+    denominators = (row_lengths[:, None] * col_lengths[None, :]).astype(np.float32)
+
+    prefix = np.pad(matrices, ((0, 0), (1, 0), (1, 0)), mode="constant")
+    prefix = prefix.cumsum(axis=1).cumsum(axis=2)
+    averaged = np.empty((matrices.shape[0], size, size), dtype=np.float32)
+
+    for row_index, (row_start, row_end) in enumerate(zip(row_starts, row_ends)):
+        row_sums = (
+            prefix[:, row_end, col_ends]
+            - prefix[:, row_start, col_ends]
+            - prefix[:, row_end, col_starts]
+            + prefix[:, row_start, col_starts]
+        )
+        averaged[:, row_index, :] = row_sums / denominators[row_index]
+
+    return averaged

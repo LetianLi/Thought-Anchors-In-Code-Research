@@ -40,3 +40,4 @@ receiver-head-analysis = "thought_anchors_code.analysis.whitebox_attention.cli:m
 collect-code-rollouts = "thought_anchors_code.rollouts.cli:main"
 download-assets = "thought_anchors_code.setup.download:main"
 plot-receiver-heads = "thought_anchors_code.analysis.whitebox_attention.plot_cli:main"
+build-attention-review-ui = "thought_anchors_code.analysis.whitebox_attention.review_ui:main"

@@ -70,6 +70,15 @@ Useful note:
 
 - the current default model is `Qwen/Qwen3.5-0.8B`
 - rollout generation is slow on this machine, so for sanity checks prefer small runs such as `--limit 1 --max-new-tokens 16`
+- rollout collection writes JSONL incrementally and resumes by default; use `--no-resume` to overwrite the output file
+- use `--batch-size` for higher generation throughput when VRAM allows
+
+Full 0.8B rollout commands used for the two code datasets:
+
+```bash
+uv run collect-code-rollouts humaneval --output assets/rollouts/humaneval_qwen3_5_0_8b_full.jsonl
+uv run collect-code-rollouts mbpp --output assets/rollouts/mbpp_qwen3_5_0_8b_full.jsonl
+```
 
 ### Receiver-head analysis
 
@@ -79,15 +88,44 @@ Run the white-box attention receiver-head pipeline on a saved rollout file:
 uv run receiver-head-analysis assets/rollouts/humaneval_pilot.jsonl
 ```
 
-Example with custom settings:
+Recommended commands for the two 0.8B rollout files:
 
 ```bash
-uv run receiver-head-analysis assets/rollouts/humaneval_pilot.jsonl --top-k 10 --proximity-ignore 4 --output results/receiver_head_summary.jsonl
+uv run receiver-head-analysis assets/rollouts/humaneval_qwen3_5_0_8b_full.jsonl \
+  --top-k 20 \
+  --proximity-ignore 4 \
+  --output results/receiver_head_summary_humaneval_qwen3_5_0_8b.jsonl
+
+uv run receiver-head-analysis assets/rollouts/mbpp_qwen3_5_0_8b_full.jsonl \
+  --top-k 20 \
+  --proximity-ignore 4 \
+  --output results/receiver_head_summary_mbpp_qwen3_5_0_8b.jsonl
 ```
 
-Important note:
+Useful flags:
 
 - use the same model for attention analysis that was used to generate the rollouts
+- `--top-k`: number of receiver heads selected by mean kurtosis
+- `--proximity-ignore`: ignore local sentence neighbors when computing vertical attention scores
+- `--no-resume`: overwrite the output JSONL instead of skipping rows already present in the summary file
+- `--no-truncate`: analyze full reasoning traces instead of truncating each trace at the input file's 75th percentile sentence count
+
+Default analysis behavior:
+
+- receiver-head analysis computes the input file's 75th percentile sentence count and truncates longer traces to that cutoff before scoring
+- this avoids pathological long rollouts dominating runtime and memory use
+- for the current 0.8B rollouts, the observed p75 cutoffs were `35` sentences for HumanEval and `13` sentences for MBPP
+- attention cache files are written incrementally under `assets/cache/whitebox_attention/`
+- summary JSONL rows are appended and flushed after global receiver-head ranking is complete
+- output rows resume by default; cached attention work also survives interrupted runs
+
+The summary JSONL contains one row per analyzed rollout:
+
+```json
+{"task_id":"HumanEval/1","sample_id":0,"sentence_scores":[null,null,0.0012],"code_sentence_scores":[0.0008,0.0021,0.0044],"receiver_head_scores":[0.0045],"dataset_name":"openai_humaneval","model_id":"Qwen/Qwen3.5-0.8B"}
+```
+
+`sentence_scores` are paper-style receiver-head scores: later reasoning attending back to each earlier reasoning sentence. `code_sentence_scores` are code-to-reasoning scores: final code/answer attention back to each reasoning sentence using the selected receiver heads.
 
 ### Receiver-head plots
 
@@ -110,6 +148,44 @@ This writes:
 - `figure4_kurtosis_histogram.png`
 - `figure4_metadata.txt`
 
+`plot-receiver-heads` also truncates at the input file's 75th percentile sentence count by default. Pass `--no-truncate` to plot full traces.
+
+### Attention review UI
+
+Build a static HTML UI for manually reviewing each rollout beside receiver-head sentence scores:
+
+```bash
+uv run build-attention-review-ui \
+  assets/rollouts/humaneval_qwen3_5_0_8b_full.jsonl \
+  results/receiver_head_summary_humaneval_qwen3_5_0_8b.jsonl \
+  --output results/humaneval_attention_review.html
+
+uv run build-attention-review-ui \
+  assets/rollouts/mbpp_qwen3_5_0_8b_full.jsonl \
+  results/receiver_head_summary_mbpp_qwen3_5_0_8b.jsonl \
+  --output results/mbpp_attention_review.html
+```
+
+Open the generated files directly:
+
+```bash
+xdg-open results/humaneval_attention_review.html
+xdg-open results/mbpp_attention_review.html
+```
+
+The UI supports search, correctness filtering, sorting by max sentence score, and per-sentence heat shading.
+Rows show both `R` scores (later reasoning to reasoning) and `C` scores (final code to reasoning). Dimmed rows were not part of the analyzed prefix, usually because of p75 truncation.
+
+### After receiver-head analysis
+
+Recommended follow-up workflow:
+
+- inspect high max-score rollouts in the review UI
+- manually label repeated high-scoring sentence types such as planning, backtracking, constraint restatement, and strategy shifts
+- compare high-scoring correct vs incorrect rollouts
+- select a small set of candidate thought-anchor sentences for causal checks
+- run masking/removal/resampling experiments to test whether removing those sentences changes downstream code or correctness
+
 ## Current architecture
 
 - `src/thought_anchors_code/setup/`: setup and download utilities
@@ -126,10 +202,10 @@ Implemented now:
 - rollout collection to JSONL files
 - receiver-head analysis scaffold
 - receiver-head plotting for Figure 4 style demos
+- static attention review UI
 - tests for config, data loading, rollout parsing, and white-box helpers
 
 Not implemented yet:
 
-- execution-based correctness evaluation for generated code
 - full black-box resampling experiment pipeline
 - end-to-end validated receiver-head results on a larger rollout set
