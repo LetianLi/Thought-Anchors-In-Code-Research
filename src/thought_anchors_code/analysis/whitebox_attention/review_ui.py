@@ -136,7 +136,7 @@ pre {{ white-space: pre-wrap; background: #080b10; border: 1px solid #252f3e; bo
   <input id="search" placeholder="Search task, prompt, answer...">
   <select id="correct"><option value="all">all correctness</option><option value="true">correct</option><option value="false">incorrect</option><option value="unknown">unknown</option></select>
   <select id="complete"><option value="all">all completion</option><option value="true">complete</option><option value="false">incomplete</option></select>
-  <select id="sort"><option value="max_r">sort: max R score</option><option value="max_c">sort: max C score</option><option value="task">sort: task</option><option value="sentences">sort: sentence count</option></select>
+  <select id="sort"><option value="task">sort: task</option><option value="max_r">sort: max R score</option><option value="max_c">sort: max C score</option><option value="sentences">sort: sentence count</option></select>
 </header>
 <main>
   <aside id="list"></aside>

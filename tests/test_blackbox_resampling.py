@@ -8,6 +8,10 @@ from thought_anchors_code.analysis.blackbox_resampling.core import (
     enumerate_sentence_interventions,
     read_completed_resampling_keys,
 )
+from thought_anchors_code.analysis.blackbox_resampling.review_ui import (
+    load_review_rows,
+    render_html,
+)
 from thought_anchors_code.analysis.blackbox_resampling.summarize import (
     summarize_resampling_file,
 )
@@ -192,3 +196,79 @@ def test_summarize_resampling_file_groups_by_selection(tmp_path) -> None:
             "mean_pass_rate_delta": 0,
         },
     ]
+
+
+def test_blackbox_review_ui_derives_intervention_metrics(tmp_path) -> None:
+    output = tmp_path / "resampling.jsonl"
+    rollout_file = tmp_path / "rollouts.jsonl"
+    output.write_text(
+        json.dumps(
+            {
+                "model_id": "model",
+                "dataset_name": "mbpp",
+                "task_id": "12",
+                "sample_id": 0,
+                "sentence_index": 1,
+                "selection": "sentence",
+                "sentence_text": "Handle empty input.",
+                "sentence_score": 0.4,
+                "code_sentence_score": 0.8,
+                "original_answer": "def f(): return 1",
+                "original_is_correct": True,
+                "prefix_sentence_count": 1,
+                "suffix_sentence_count": 2,
+                "resamples": [
+                    {
+                        "resample_id": 0,
+                        "raw": "raw",
+                        "reasoning": "why",
+                        "answer": "def f(): return 2",
+                        "complete": True,
+                        "is_correct": False,
+                    },
+                    {
+                        "resample_id": 1,
+                        "raw": "raw",
+                        "reasoning": "why",
+                        "answer": "def f(): return 1",
+                        "complete": False,
+                        "is_correct": True,
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rollout_file.write_text(
+        json.dumps(
+            {
+                "model_id": "model",
+                "dataset_name": "mbpp",
+                "task_id": "12",
+                "sample_id": 0,
+                "complete": True,
+                "prompt": "Solve it.",
+                "reasoning": "Original reasoning step one. Original reasoning step two.",
+                "answer": "def f(): return 1",
+                "is_correct": True,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = load_review_rows(output, rollout_file)
+    html = render_html(rows)
+
+    assert rows[0]["original_reasoning"] == (
+        "Original reasoning step one. Original reasoning step two."
+    )
+    assert rows[0]["resample_pass_rate"] == 0.5
+    assert rows[0]["pass_rate_delta"] == -0.5
+    assert rows[0]["complete_resamples"] == 1
+    assert rows[0]["changed_answers"] == 1
+    assert "Black-Box Resampling Review" in html
+    assert "Generated Draws" in html
+    assert "Reasoning continuation" in html
+    assert "Raw output" not in html
