@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 
@@ -56,6 +57,12 @@ def main(argv: list[str] | None = None) -> None:
         help="only process is_correct==True rollouts (default: True)",
     )
     parser.add_argument("--rollout-file", default=None, help="override rollout JSONL path")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="per-rollout timeout in seconds (default: 300); 0 to disable",
+    )
     args = parser.parse_args(argv)
 
     dataset = canonical_dataset_name(args.dataset)
@@ -93,12 +100,24 @@ def main(argv: list[str] | None = None) -> None:
         do_flash_attn=False,
     )
 
+    use_timeout = args.timeout > 0
+
+    def _alarm_handler(signum, frame):
+        raise TimeoutError(f"exceeded {args.timeout}s")
+
+    if use_timeout:
+        signal.signal(signal.SIGALRM, _alarm_handler)
+
     errors = 0
     for idx, rollout in enumerate(rollouts, 1):
         out_path = _npz_path(out_dir, rollout.task_id, rollout.sample_id)
         print(f"[{idx}/{len(rollouts)}] {rollout.task_id} s{rollout.sample_id} …", end=" ", flush=True)
         try:
+            if use_timeout:
+                signal.alarm(args.timeout)
             matrix, sentences, _ = compute_causal_matrix(rollout, model, tokenizer)
+            if use_timeout:
+                signal.alarm(0)
             M = len(sentences)
             np.savez_compressed(
                 out_path,
@@ -111,6 +130,8 @@ def main(argv: list[str] | None = None) -> None:
             )
             print(f"done (M={M})")
         except Exception as exc:
+            if use_timeout:
+                signal.alarm(0)
             print(f"ERROR: {exc}")
             errors += 1
 
