@@ -1,0 +1,34 @@
+[
+  {
+    "dataset_name": "openai_humaneval",
+    "dataset_label": "HumanEval",
+    "generated_rollouts": 164,
+    "complete_rollouts": 133,
+    "correct_rollouts": 44,
+    "labeled_rollouts": 136,
+    "labeled_sentences": 3566,
+    "receiver_rollouts": 150,
+    "receiver_sentence_scores": 1751,
+    "code_sentence_scores": 1651,
+    "causal_matrix_rollouts": 41,
+    "causal_matrix_sentences": 542,
+    "blackbox_interventions": 1452,
+    "blackbox_resamples": 1452
+  },
+  {
+    "dataset_name": "mbpp",
+    "dataset_label": "MBPP",
+    "generated_rollouts": 500,
+    "complete_rollouts": 411,
+    "correct_rollouts": 103,
+    "labeled_rollouts": 378,
+    "labeled_sentences": 3053,
+    "receiver_rollouts": 360,
+    "receiver_sentence_scores": 1471,
+    "code_sentence_scores": 2394,
+    "causal_matrix_rollouts": 96,
+    "causal_matrix_sentences": 671,
+    "blackbox_interventions": 0,
+    "blackbox_resamples": 0
+  }
+]
