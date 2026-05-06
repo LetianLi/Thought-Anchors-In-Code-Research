@@ -176,6 +176,54 @@ xdg-open results/mbpp_attention_review.html
 The UI supports search, correctness filtering, sorting by max sentence score, and per-sentence heat shading.
 Rows show both `R` scores (later reasoning to reasoning) and `C` scores (final code to reasoning). Dimmed rows were not part of the analyzed prefix, usually because of p75 truncation.
 
+### Black-box resampling
+
+Run causal sentence resampling over every reasoning sentence in each rollout. The command truncates each rollout to the file-level 75th percentile sentence count by default, builds a continuation prompt from the original task plus the reasoning prefix before each sentence, omits that sentence, samples new continuations/code, and evaluates the regenerated code against the benchmark tests.
+
+Small sanity run:
+
+```bash
+uv run blackbox-resampling \
+  assets/rollouts/humaneval_qwen3_5_0_8b_full.jsonl \
+  results/receiver_head_summary_humaneval_qwen3_5_0_8b.jsonl \
+  humaneval \
+  --limit-rollouts 2 \
+  --num-resamples 1 \
+  --batch-size 4 \
+  --max-new-tokens 256 \
+  --output results/blackbox_resampling_humaneval_pilot.jsonl
+```
+
+Paper-style runs should use more resamples:
+
+```bash
+uv run blackbox-resampling \
+  assets/rollouts/humaneval_qwen3_5_0_8b_full.jsonl \
+  results/receiver_head_summary_humaneval_qwen3_5_0_8b.jsonl \
+  humaneval \
+  --num-resamples 5 \
+  --batch-size 8 \
+  --output results/blackbox_resampling_humaneval_qwen3_5_0_8b.jsonl
+
+uv run blackbox-resampling \
+  assets/rollouts/mbpp_qwen3_5_0_8b_full.jsonl \
+  results/receiver_head_summary_mbpp_qwen3_5_0_8b.jsonl \
+  mbpp \
+  --num-resamples 5 \
+  --batch-size 8 \
+  --output results/blackbox_resampling_mbpp_qwen3_5_0_8b.jsonl
+```
+
+By default, the command resamples every sentence in each rollout and attaches the receiver-head scores as metadata when available. `--batch-size` controls how many intervention/resample continuations are generated in one model call; lower it if VRAM is tight. Output JSONL resumes by default using `(dataset, task_id, sample_id, sentence_index, selection)`, where `selection` is fixed to `sentence`.
+
+Summarize completed runs:
+
+```bash
+uv run summarize-blackbox-resampling \
+  results/blackbox_resampling_humaneval_qwen3_5_0_8b.jsonl \
+  --output results/blackbox_resampling_humaneval_summary.csv
+```
+
 ### After receiver-head analysis
 
 Recommended follow-up workflow:
@@ -183,8 +231,8 @@ Recommended follow-up workflow:
 - inspect high max-score rollouts in the review UI
 - manually label repeated high-scoring sentence types such as planning, backtracking, constraint restatement, and strategy shifts
 - compare high-scoring correct vs incorrect rollouts
-- select a small set of candidate thought-anchor sentences for causal checks
-- run masking/removal/resampling experiments to test whether removing those sentences changes downstream code or correctness
+- run exhaustive sentence-wise resampling under the p75 cutoff to test whether removing each sentence changes downstream code or correctness
+- use the receiver-head scores as annotations, not as the sentence-selection gate
 
 ## Current architecture
 
@@ -203,9 +251,10 @@ Implemented now:
 - receiver-head analysis scaffold
 - receiver-head plotting for Figure 4 style demos
 - static attention review UI
+- black-box sentence resampling over every sentence with p75 truncation and summary CSVs
 - tests for config, data loading, rollout parsing, and white-box helpers
 
 Not implemented yet:
 
-- full black-box resampling experiment pipeline
-- end-to-end validated receiver-head results on a larger rollout set
+- end-to-end black-box resampling results on the full rollout set
+- white-box masking experiments
