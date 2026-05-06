@@ -43,3 +43,6 @@ plot-receiver-heads = "thought_anchors_code.analysis.whitebox_attention.plot_cli
 build-attention-review-ui = "thought_anchors_code.analysis.whitebox_attention.review_ui:main"
 blackbox-resampling = "thought_anchors_code.analysis.blackbox_resampling.cli:main"
 summarize-blackbox-resampling = "thought_anchors_code.analysis.blackbox_resampling.summarize:main"
+label-code-rollouts = "thought_anchors_code.analysis.labeling.cli:main"
+label-code-rollouts-tui = "thought_anchors_code.analysis.labeling.tui:main"
+build-label-review-ui = "thought_anchors_code.analysis.labeling.review_ui:main"
