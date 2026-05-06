@@ -213,8 +213,8 @@ def run_analysis(rows: list[dict], dataset_label: str) -> None:
         vmax = np.nanpercentile(np.abs(matrix), 95)
         im = ax.imshow(matrix, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
         ax.set_title(f"{row['task_id']} s{row['sample_id']}\nM={row['M']}", fontsize=9)
-        ax.set_xlabel("Source sentence i")
-        ax.set_ylabel("Target sentence j")
+        ax.set_xlabel("Target sentence j")
+        ax.set_ylabel("Source sentence i")
         plt.colorbar(im, ax=ax, shrink=0.7)
 
     plt.suptitle(f"Causal Matrices (largest M) — {dataset_label}", fontsize=12)
