@@ -105,3 +105,59 @@ uv run summarize-blackbox-resampling \
   results/blackbox_resampling_humaneval_qwen3_5_0_8b.jsonl \
   --output results/blackbox_resampling_humaneval_summary.csv
 ```
+
+### Sentence labeling
+
+Label each reasoning sentence in correct rollouts with function tags from the Thought Anchors taxonomy using the Gemini API. Requires a `GEMINI_API_KEY` environment variable.
+
+```bash
+GEMINI_API_KEY="..." uv run python scripts/label_sentences.py humaneval
+GEMINI_API_KEY="..." uv run python scripts/label_sentences.py mbpp
+```
+
+Output: `results/sentence_labels_{dataset}_qwen3_5_0_8b.jsonl`
+
+Only processes `is_correct == True` rollouts. Use `--dry-run` to label the first 3 rollouts without writing to the production file.
+
+### Causal masking (whitebox attention suppression)
+
+Compute M×M sentence-level causal influence matrices per rollout by suppressing attention from each source sentence across all softmax-attention layers and measuring mean log-KL divergence on target tokens. Implements Section 5 / Algorithm 1 (Appendix M) of the paper.
+
+```bash
+uv run python -m thought_anchors_code.analysis.whitebox_masking.run --dataset humaneval
+uv run python -m thought_anchors_code.analysis.whitebox_masking.run --dataset mbpp
+```
+
+Options:
+- `--resume` — skip already-computed rollouts
+- `--max-rollouts N` — limit to N rollouts (useful for smoke testing)
+- `--device cuda|cpu|auto` — override device placement
+
+Output: `results/causal_matrices_{dataset}_qwen3_5_0_8b/{task_id}_s{sample_id}.npz`
+
+Each `.npz` contains `causal_matrix` [M×M float32], NaN on diagonal and upper triangle, column-normalised lower triangle.
+
+### Figure generation
+
+Generate all analysis figures from computed causal matrices, receiver-head summaries, and sentence labels:
+
+```bash
+uv run python analyze_causal_matrices.py --dataset humaneval mbpp
+```
+
+Saves to `results/figures/`:
+
+| File | Description |
+|------|-------------|
+| `causal_correlation_{dataset}.png` | Scatter of receiver-head R-score vs causal influence exerted per sentence, with anchor position histogram |
+| `causal_heatmaps_{dataset}.png` | Representative M×M causal matrices for the largest rollouts, tick labels colour-coded by function tag |
+| `causal_position_{dataset}.png` | Same scatter coloured by relative sentence position in trace |
+| `causal_by_tag_{dataset}.png` | Mean causal influence exerted and mean R-score per function tag |
+| `causal_tag_pair_{dataset}.png` | Mean causal influence averaged by (source tag, target tag) pair |
+
+To inspect individual sentence pairs with the strongest causal influence:
+
+```bash
+uv run python show_causal_examples.py --dataset humaneval
+uv run python show_causal_examples.py --dataset humaneval --task HumanEval/7 --top 5
+```
